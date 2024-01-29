@@ -1,39 +1,45 @@
 #pragma once
 
 #include <stdint.h>
-// Smallest log format
-// 16-bit timestamp in 1/2000 sec units
+// The EventLog CSU writes debugging output in a structured format to
+// an output port.  Unlike the freeform prints of the debug output,
+// the EventLog has one specific format focussed on reporting when
+// and which order specific parts of code are executed.
 // 
-// If the 3rd byte has the 0x80 bit set, it indicates that this is a
-// short message with no 2nd event byte and no payload.
-// The 3 bit eventId1 indicate the 8 short event IDs
-// For a short message, the payload field represents
-// and integer value between from 0 to 15
+// Since the expected output is a serial port, the events need to be
+// kept short to allow for many events to be reported every second. 
+//
+// For an embedded system using a serial port as output, the two
+// most common data rates are
+// - 9,600 bits per second. Too slow
+// - 115,200 bits per second
+// Assume 10 bits per byte and a 50% derating.
+// - 115,200 bps -> 5,760 bytes per second.
+//
+// The event message format:
+// - Word 1
+//   - 2-bit version: The version number of this log format. Always = 0
+//   - 2-bit level: indicates DEBUG, INFO, WARNING, or CRITICAL
+//   - 4-bit format indicator: an enumerated type describes the length and format of the message
+//   - 8-bit source: enumerated type that indicates the module that originates the message
+// - Word 2
+//   - 16-bit Timestamp MSB: Upper 16 bits of 24-bit number. 1 unit = 1 microsecond
+// - Word 3
+//   - 8-bit Timestamp LSB: Lower 8 bits of 24-bit number. 1 unit = 1 microsecond
+//   - 8-bit event ID: enumerated type that indicates the type of event that occurred
+// - Word 4 [Optional]
+//   - 16-bit payload
+// - Word 5 [Optional]
+//   - 16-bit payload
 // 
-// If the 1st byte does not have the 0x80 bit set
-// - 4 bits payload is an enumerated type that describes the data field
-// - 3 bits are the high bits for the Event ID
-// And the 4th byte is 8 low bits for the Event ID
+// For framing, we'll use SLIP (RFC 1055) usually adds one byte to the message.
 // 
-// 0, 8, 16,or 32 bits additional payload
-
-// The 4 bits of payload format enum are
-// - no payload
-// - boolean false
-// - boolean true
-// - <noop>
-// - 1 char
-// - U8
-// - S8
-// - <noop>
-// - 2 chars
-// - U16
-// - S16
-// - <noop>
-// - 4 chars
-// - U32
-// - S32
-// - F32
+// Thus message size is 7--11 bytes bytes, this allows a maximum of 822 messages per second.
+//
+// Events include
+// - state and mode changes
+// - every message sent and received
+// - CPU usage and Task usage
 
 typedef struct EventLogMsg
 {
