@@ -79,12 +79,51 @@ typedef enum EventType {
 	EVENT_8,
 } EventType;
 
+enum EventDataType {
+	EVENT_DATA_NONE,
+	EVENT_DATA_BOOL,
+	EVENT_DATA_INT8,
+	EVENT_DATA_UINT8,
+	EVENT_DATA_INT16,
+	EVENT_DATA_UINT16,
+	EVENT_DATA_INT32,
+	EVENT_DATA_UINT32,
+	EVENT_DATA_FLOAT,
+	EVENT_DATA_STRING
+};
+
+union EventDataPayload
+{
+	uint16_t words[2];
+	bool boolean;
+	int8_t s8;
+	uint8_t u8;
+	int16_t s16;
+	uint16_t u16;
+	int32_t s32;
+	uint32_t u32;
+	float f32;
+	char str[4];
+};
+
+typedef struct EventData
+{
+	int frameSize;
+	bool valid;
+	EventLevel level;
+	EventSource sourceID;
+	EventType eventID;
+	uint32_t timestamp;
+	enum EventDataType dataType;
+	union EventDataPayload data;
+} EventData;
+
 // Functions of this type should take strings and the associated
 // lengths and write them to an output sink.
-typedef void (*EventOutputFunc)(int len, const char* buf);
+typedef void (*EventOutputFunc)(const char* buf, int len);
 
 // Functions of this type should return the current time in milliseconds
-// since the start of the program.
+// since the start of some epoch.
 typedef uint32_t(*EventTimeGetterFunc)(void);
 
 void event(EventLevel level, EventSource source, EventType type);
@@ -97,6 +136,9 @@ void eventU32(EventLevel level, EventSource source, EventType type, uint32_t val
 void eventS32(EventLevel level, EventSource source, EventType type, int32_t val);
 void eventFloat(EventLevel level, EventSource source, EventType type, float val);
 void eventStr(EventLevel level, EventSource source, EventType type, const char *str);
+
+EventData eventUnpackFrame(const char* frame, int size);
+void printEvent(const EventData* event);
 
 // For example,
 // eventU16(EVENT_INFO, EVENT_SOURCE_177_MANAGER, EVENT_SEND, 7777);
